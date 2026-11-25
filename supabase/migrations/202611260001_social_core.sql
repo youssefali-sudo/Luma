@@ -109,20 +109,26 @@ using (bucket_id = 'luma-media' and (storage.foldername(name))[1] = (select auth
 create or replace function public.notify_social_activity()
 returns trigger language plpgsql security definer set search_path = ''
 as $$
-declare target_user uuid; target_post uuid; activity_kind text;
+declare target_user uuid; target_post uuid; actor_user uuid; activity_kind text;
 begin
   if tg_table_name = 'follows' then
-    target_user := new.following_id; activity_kind := 'follow';
+    target_user := new.following_id;
+    actor_user := new.follower_id;
+    activity_kind := 'follow';
   elsif tg_table_name = 'post_likes' then
-    target_post := new.post_id; activity_kind := 'like';
+    target_post := new.post_id;
+    actor_user := new.user_id;
+    activity_kind := 'like';
     select author_id into target_user from public.posts where id = new.post_id;
   else
-    target_post := new.post_id; activity_kind := 'comment';
+    target_post := new.post_id;
+    actor_user := new.author_id;
+    activity_kind := 'comment';
     select author_id into target_user from public.posts where id = new.post_id;
   end if;
-  if target_user is not null and target_user <> new.follower_id and target_user <> new.user_id and target_user <> new.author_id then
+  if target_user is not null and target_user <> actor_user then
     insert into public.notifications(recipient_id, actor_id, kind, post_id)
-    values (target_user, auth.uid(), activity_kind, target_post);
+    values (target_user, actor_user, activity_kind, target_post);
   end if;
   return new;
 end;

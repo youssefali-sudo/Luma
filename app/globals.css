@@ -20,3 +20,21 @@ button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
 @keyframes holoPulse { 0%,100% { opacity: .65; transform: scale(.98); } 50% { opacity: 1; transform: scale(1.04); } }
 input[type="range"] { accent-color: #00f0ff; }
 @media (max-width: 480px) { .glass-dock { bottom: max(12px, env(safe-area-inset-bottom)); padding: 12px; } .dock-button { font-size: 9px; } }
+
+
+.holo-base-ring {
+  width: min(34vw, 190px);
+  height: min(10vw, 46px);
+  min-width: 110px;
+  min-height: 26px;
+  border: 2px solid #00cfff;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 207, 255, .18), rgba(0, 207, 255, .02) 58%, transparent 72%);
+  transform-origin: center;
+  animation: baseRingPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes baseRingPulse {
+  0%, 100% { opacity: .65; filter: brightness(.9); }
+  50% { opacity: 1; filter: brightness(1.45); }
+}

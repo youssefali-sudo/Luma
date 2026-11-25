@@ -123,7 +123,7 @@ export default function Home() {
             <div className="section-heading"><h2>الستوري <span className="live-dot" /></h2><button onClick={() => notify("مشاهدة الستوري هتتربط بالحسابات الحقيقية قريبًا")}>عرض الكل <span>←</span></button></div>
             <div className="stories-strip">
               <button className="story-person own-story" onClick={() => setShowCreate(true)}><span className="story-circle add-story"><Avatar src={people[2].avatar} name="قصتك" size="lg" /><i>+</i></span><span>أضف ستوري</span></button>
-              {people.map((person) => <button className="story-person" key={person.name} onClick={() => notify(`ستوري ${person.name} — معاينة تصميم")}><span className="story-circle"><Avatar src={person.avatar} name={person.name} size="lg" /></span><span>{person.name}</span></button>)}
+              {people.map((person) => <button className="story-person" key={person.name} onClick={() => notify(`ستوري ${person.name} — معاينة تصميم`)}><span className="story-circle"><Avatar src={person.avatar} name={person.name} size="lg" /></span><span>{person.name}</span></button>)}
             </div>
           </section>}
 

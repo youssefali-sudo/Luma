@@ -113,7 +113,7 @@ export default function Home() {
     maskCtx.drawImage(results.segmentationMask, 0, 0, w, h);
     maskCtx.globalCompositeOperation = "source-atop";
     maskCtx.fillStyle = COLORS[colorRef.current];
-    maskCtx.globalAlpha = Math.min(0.58, glow / 150);
+    maskCtx.globalAlpha = Math.min(0.58, visual.glow / 150);
     maskCtx.fillRect(0, 0, w, h);
     maskCtx.globalAlpha = 1;
     if (visual.scanlines) {

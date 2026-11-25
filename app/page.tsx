@@ -48,23 +48,29 @@ export default function Home() {
     ctx.save();
     ctx.clearRect(0, 0, width, height);
 
-    // Isolate the subject on transparency, then place pure black behind it.
+    // Isolate the subject on transparency before adding any visual effects.
     ctx.drawImage(results.image, 0, 0, width, height);
     ctx.globalCompositeOperation = "destination-in";
     ctx.drawImage(results.segmentationMask, 0, 0, width, height);
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.globalAlpha = glow / 500;
+    ctx.fillStyle = "#22d3ee";
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = 1;
+
+    // Scan lines are drawn while the background is still transparent, so they stay on the subject.
+    if (scanlines) {
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = "#55eaff";
+      for (let y = 2; y < height; y += 7) ctx.fillRect(0, y, width, 1);
+      ctx.globalAlpha = 1;
+    }
+
+    // Fill only the transparent areas with pure black after effects are applied.
     ctx.globalCompositeOperation = "destination-over";
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, width, height);
     ctx.globalCompositeOperation = "source-over";
-
-    // Keep black pixels black; add subtle scan lines only when enabled.
-    if (scanlines) {
-      ctx.save();
-      ctx.globalAlpha = 0.1;
-      ctx.fillStyle = "#55eaff";
-      for (let y = 2; y < height; y += 7) ctx.fillRect(0, y, width, 1);
-      ctx.restore();
-    }
     ctx.restore();
   }, [brightness, glow, scanlines]);
 

@@ -29,9 +29,9 @@ function Icon({ name, size = 21 }: { name: string; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.home}</svg>;
 }
 
-function Avatar({ profile, size = "md" }: { profile: Partial<Profile> | null | undefined; size?: "sm" | "md" | "lg" }) {
+function Avatar({ profile, size = "md", ring = false }: { profile: Partial<Profile> | null | undefined; size?: "sm" | "md" | "lg"; ring?: boolean }) {
   const name = profile?.display_name || profile?.username || "LUMA";
-  return <span className={`avatar avatar-${size}`}>{profile?.avatar_url ? <img src={profile.avatar_url} alt={name} /> : <span className="avatar-fallback">{name.slice(0, 1).toUpperCase()}</span>}</span>;
+  return <span className={`avatar avatar-${size} ${ring ? "avatar-ring" : ""}`}>{profile?.avatar_url ? <img src={profile.avatar_url} alt={name} /> : <span className="avatar-fallback">{name.slice(0, 1).toUpperCase()}</span>}</span>;
 }
 function personOf(value: PostRow["author"]): Profile | null {
   return Array.isArray(value) ? value[0] || null : value;

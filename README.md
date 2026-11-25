@@ -1,30 +1,45 @@
-# LUMA — Holographic Studio MVP
+# LUMA — Social Platform MVP
 
-A Next.js browser studio for experimenting with live portrait segmentation on a pure-black canvas and a cyan hologram-inspired look.
+LUMA is a Next.js 15 + TypeScript social platform foundation. The production feed is connected to Supabase Auth, Postgres, Storage, and Realtime; there are no hard-coded demo posts in the authenticated feed.
 
-## Run locally
+## Included in this phase
 
-1. Install Node.js 20 or newer.
-2. Install dependencies: `npm install`
-3. Start the dev server: `npm run dev`
-4. Open `http://localhost:3000` and allow camera access.
+- Email/password sign-up and sign-in at `/login` using Supabase Auth.
+- User profiles with unique usernames, display names, and bios.
+- Database-backed social feed and profile pages.
+- Image/video post uploads to Supabase Storage (50 MB maximum per upload).
+- 24-hour stories, likes, comments, follows, and activity notifications.
+- Row Level Security (RLS) policies for the social tables and per-user upload folders.
+- Realtime refresh for posts, likes, and stories.
 
-Camera access requires HTTPS in production or localhost during development. The MediaPipe Selfie Segmentation script and model files load from jsDelivr, so the first run needs an internet connection.
+Direct messages, group/channel management UI, full notification preferences, moderation tools, and mobile app packaging are not yet complete. The existing database schema contains an initial model for conversations and spaces; those screens will be connected in the next phase.
 
-## Included
+## Local development
 
-- Live camera preview with person segmentation.
-- Black canvas background, cyan glow, optional scan lines.
-- Horizontal mirror and vertical flip.
-- Brightness and glow controls.
-- Front/rear camera selection and fullscreen.
+1. Use Node.js 20 or newer.
+2. Install packages: `npm install`
+3. Copy `.env.example` to `.env.local` and fill in your Supabase project URL and anon/publishable key.
+4. Run `npm run dev` and open `http://localhost:3000`.
 
-## Important limitations
+Required public environment variables:
 
-This is a visual MVP, not a real hologram projector. Pepper's Ghost requires a suitable transparent reflective surface and a controlled viewing environment. Black pixels reduce unwanted light but cannot guarantee perfect invisibility on every display.
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY
+```
 
-The current build segments the device camera. To show the other person during a video call, the app must receive that participant's remote video stream through a video-call integration; it cannot automatically take over another app's call stream.
+Never put a Supabase `service_role` key in browser code or any `NEXT_PUBLIC_*` variable.
 
-## Deploy
+## Supabase setup
 
-Import this repository into Vercel or another Next.js host. No secret environment variables are required for this prototype.
+1. Create a project in the Supabase dashboard.
+2. Open **SQL Editor** and run `supabase/schema.sql` first.
+3. Then run `supabase/migrations/202611260001_social_core.sql`.
+4. In **Authentication → URL Configuration**, add your deployed site URL to Site URL and add the local and production callback URLs to Redirect URLs.
+5. Add the two environment variables above to your local environment and your hosting provider (for example, Vercel → Project → Settings → Environment Variables), then redeploy.
+
+The SQL creates the profile/conversation foundation, social tables, RLS policies, the `luma-media` storage bucket, and activity notifications. Review policies before making the service public and add rate limiting/moderation before a broad launch.
+
+## CI
+
+GitHub Actions runs TypeScript checks and `next build` on pushes and pull requests to `main`. A successful CI run validates compilation, not the availability of your Supabase project or production deployment.

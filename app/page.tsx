@@ -11,6 +11,8 @@ type PostRow = {
   author: Profile | Profile[] | null;
 };
 type StoryRow = { id: string; user_id: string; media_path: string | null; caption: string; expires_at: string; profile?: Profile | Profile[] | null };
+type ConversationRow = { id: string; title: string | null; is_group: boolean; created_at: string; other: Profile | null; last_message: string; last_at: string | null };
+type MessageRow = { id: string; conversation_id: string; sender_id: string; body: string; created_at: string; attachment_path: string | null; attachment_name: string | null };
 type Tab = "discover" | "search" | "profile" | "groups" | "messages";
 
 function Icon({ name, size = 21 }: { name: string; size?: number }) {
@@ -68,6 +70,11 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
   const [notifications, setNotifications] = useState<{ id: string; kind: string; created_at: string; actor: { display_name: string; username: string } | null }[]>([]);
+  const [conversations, setConversations] = useState<ConversationRow[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [messageRows, setMessageRows] = useState<MessageRow[]>([]);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [messageBusy, setMessageBusy] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [editProfile, setEditProfile] = useState(false);
   const [editName, setEditName] = useState("");
@@ -130,12 +137,13 @@ export default function Home() {
   useEffect(() => {
     if (!supabase || !userId) return;
     const channel = supabase.channel("luma-social-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (payload) => { const row = payload.new as Partial<MessageRow>; if (row.conversation_id && row.conversation_id === selectedConversation) void loadMessages(row.conversation_id); void loadConversations(userId); })
       .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => { void loadFeed(userId); })
       .on("postgres_changes", { event: "*", schema: "public", table: "post_likes" }, () => { void loadFeed(userId); })
       .on("postgres_changes", { event: "*", schema: "public", table: "stories" }, () => { void loadFeed(userId); })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [supabase, userId, loadFeed]);
+  }, [supabase, userId, loadFeed, selectedConversation]);
 
   const filteredPosts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -234,6 +242,106 @@ export default function Home() {
     await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("recipient_id", userId).is("read_at", null);
   }
 
+  async function loadConversations(uid: string) {
+    if (!supabase || !uid) return;
+    const { data: memberships, error: membershipError } = await supabase
+      .from("conversation_members").select("conversation_id").eq("user_id", uid);
+    if (membershipError) throw membershipError;
+    const ids = [...new Set((memberships || []).map((row) => row.conversation_id))];
+    if (!ids.length) { setConversations([]); setSelectedConversation(null); setMessageRows([]); return; }
+    const [{ data: convs, error: convError }, { data: members, error: membersError }, { data: messages, error: messagesError }] = await Promise.all([
+      supabase.from("conversations").select("id,title,is_group,created_at").in("id", ids).order("created_at", { ascending: false }),
+      supabase.from("conversation_members").select("conversation_id,user_id,profile:profiles!conversation_members_user_id_fkey(id,username,display_name,bio,avatar_url)").in("conversation_id", ids),
+      supabase.from("messages").select("id,conversation_id,sender_id,body,created_at,attachment_path,attachment_name").in("conversation_id", ids).order("created_at", { ascending: false }).limit(200),
+    ]);
+    if (convError) throw convError;
+    if (membersError) throw membersError;
+    if (messagesError) throw messagesError;
+    const next = (convs || []).map((conv) => {
+      const memberRows = (members || []).filter((row) => row.conversation_id === conv.id);
+      const otherRow = memberRows.find((row) => row.user_id !== uid);
+      const rawProfile = otherRow?.profile as unknown as Profile | Profile[] | null;
+      const other = Array.isArray(rawProfile) ? rawProfile[0] || null : rawProfile;
+      const latest = (messages || []).find((row) => row.conversation_id === conv.id);
+      return { id: conv.id, title: conv.title, is_group: conv.is_group, created_at: conv.created_at, other, last_message: latest?.body || (latest?.attachment_name ? "📎 " + latest.attachment_name : ""), last_at: latest?.created_at || null };
+    }).sort((a, b) => (b.last_at || b.created_at).localeCompare(a.last_at || a.created_at));
+    setConversations(next);
+    setSelectedConversation((current) => current && next.some((row) => row.id === current) ? current : next[0]?.id || null);
+  }
+
+  const loadMessages = useCallback(async (conversationId: string) => {
+    if (!supabase) return;
+    const { data, error: messageError } = await supabase.from("messages")
+      .select("id,conversation_id,sender_id,body,created_at,attachment_path,attachment_name")
+      .eq("conversation_id", conversationId).order("created_at", { ascending: true }).limit(200);
+    if (messageError) { notify("تعذر تحميل الرسائل: " + messageError.message); return; }
+    setMessageRows((data || []) as MessageRow[]);
+    await supabase.from("conversation_members").update({ last_read_at: new Date().toISOString() }).eq("conversation_id", conversationId).eq("user_id", userId);
+  }, [supabase, userId, notify]);
+
+  useEffect(() => {
+    if (!supabase || !userId) return;
+    void loadConversations(userId).catch((e) => setError(e instanceof Error ? e.message : "تعذر تحميل المحادثات."));
+  }, [supabase, userId]);
+
+  useEffect(() => {
+    if (!selectedConversation) { setMessageRows([]); return; }
+    void loadMessages(selectedConversation);
+  }, [selectedConversation, loadMessages]);
+
+  async function startConversation() {
+    if (!supabase || !userId) return;
+    const handle = window.prompt("اكتب اسم المستخدم للشخص الذي تريد مراسلته (بدون @)");
+    if (!handle?.trim()) return;
+    const username = handle.trim().replace(/^@/, "");
+    const { data: target, error: targetError } = await supabase.from("profiles")
+      .select("id,username,display_name,bio,avatar_url").eq("username", username).maybeSingle();
+    if (targetError) { notify("تعذر البحث عن الحساب: " + targetError.message); return; }
+    if (!target) { notify("مش لاقيين مستخدم بالاسم ده."); return; }
+    if (target.id === userId) { notify("اختار اسم مستخدم مختلف عن حسابك."); return; }
+    setMessageBusy(true);
+    try {
+      const ownMemberships = await supabase.from("conversation_members").select("conversation_id").eq("user_id", userId);
+      if (ownMemberships.error) throw ownMemberships.error;
+      const ownIds = (ownMemberships.data || []).map((x) => x.conversation_id);
+      if (ownIds.length) {
+        const { data: existing, error: existingError } = await supabase.from("conversations").select("id,is_group")
+          .in("id", ownIds).eq("is_group", false);
+        if (existingError) throw existingError;
+        for (const conv of existing || []) {
+          const { data: other } = await supabase.from("conversation_members").select("user_id")
+            .eq("conversation_id", conv.id).eq("user_id", target.id).maybeSingle();
+          if (other) { await loadConversations(userId); setSelectedConversation(conv.id); setTab("messages"); return; }
+        }
+      }
+      const { data: created, error: createError } = await supabase.from("conversations")
+        .insert({ created_by: userId, is_group: false, title: null }).select("id").single();
+      if (createError) throw createError;
+      const { error: addMembersError } = await supabase.from("conversation_members").insert([
+        { conversation_id: created.id, user_id: userId },
+        { conversation_id: created.id, user_id: target.id },
+      ]);
+      if (addMembersError) throw addMembersError;
+      await loadConversations(userId);
+      setSelectedConversation(created.id); setTab("messages");
+    } catch (e) { notify("تعذر بدء المحادثة: " + (e instanceof Error ? e.message : "خطأ غير معروف")); }
+    finally { setMessageBusy(false); }
+  }
+
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || !selectedConversation || !messageDraft.trim()) return;
+    setMessageBusy(true);
+    const body = messageDraft.trim();
+    setMessageDraft("");
+    const { error: sendError } = await supabase.from("messages").insert({
+      conversation_id: selectedConversation, sender_id: userId, body,
+    });
+    if (sendError) { setMessageDraft(body); notify("تعذر إرسال الرسالة: " + sendError.message); }
+    else { await loadMessages(selectedConversation); await loadConversations(userId); }
+    setMessageBusy(false);
+  }
+
   async function signOut() {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -262,7 +370,14 @@ export default function Home() {
           {tab === "search" && <div className="search-field"><Icon name="search" size={20} /><input value={search} onChange={(e) => { setSearch(e.target.value); }} onKeyDown={(e) => { if (e.key === "Enter") void searchPeople(); }} placeholder="ابحث باسم أو @username..." /><button onClick={() => void searchPeople()}>بحث</button></div>}
           {tab === "discover" && <section className="stories-section"><div className="section-heading"><h2>الستوري <span className="live-dot" /></h2><button onClick={() => { setCreateKind("story"); setShowCreate(true); }}>أضف ستوري +</button></div><div className="stories-strip"><button className="story-person own-story" onClick={() => { setCreateKind("story"); setShowCreate(true); }}><span className="story-circle add-story"><Avatar profile={profile} size="lg" /><i>+</i></span><span>قصتك</span></button>{stories.map((story) => { const p = Array.isArray(story.profile) ? story.profile[0] : story.profile; return <button className="story-person" key={story.id} onClick={() => story.media_path ? window.open(mediaUrl(story.media_path, supabase!), "_blank", "noopener,noreferrer") : notify(story.caption || "ستوري LUMA")}><span className="story-circle"><Avatar profile={p} size="lg" /></span><span>{p?.display_name || p?.username || "عضو"}</span></button>; })}</div></section>}
           {tab === "profile" && <section className="profile-view"><div className="profile-cover"><div className="cover-orb" /><button className="round-icon edit-profile" onClick={() => { setEditName(profile.display_name); setEditBio(profile.bio || ""); setEditProfile(true); }} aria-label="تعديل الملف">تعديل</button></div><div className="profile-main"><Avatar profile={profile} size="lg" ring /><h2>{profile.display_name}</h2><p className="profile-handle">@{profile.username}</p><p className="profile-bio">{profile.bio || "اكتب نبذة تعرّف الناس عليك."}</p><div className="profile-stats"><div><strong>{followingIds.length}</strong><span>Following</span></div><div><strong>{posts.filter((p) => p.author_id === userId).length}</strong><span>Posts</span></div><div><strong>{compact(Object.values(likeCounts).reduce((a,b) => a+b,0))}</strong><span>Likes in feed</span></div></div><div className="profile-actions"><button className="primary-action" onClick={() => { setCreateKind("post"); setShowCreate(true); }}>＋ منشور جديد</button><button className="secondary-action" onClick={() => setEditProfile(true)}>تعديل الملف</button></div></div><div className="profile-grid">{posts.filter((p) => p.author_id === userId).map((post) => <button key={post.id} className="profile-tile" onClick={() => notify(post.caption)}>{post.media_path ? <img src={mediaUrl(post.media_path, supabase!)} alt={post.caption} /> : <span>{post.caption}</span>}</button>)}</div></section>}
-          {tab === "messages" && <div className="welcome-card"><span className="eyebrow">PRIVATE MESSAGES</span><h3>قريبًا<br /><em>رسائلك.</em></h3><p>قاعدة الرسائل وسياسات الوصول موجودة في مخطط الأساس. الخطوة التالية توصيل واجهة المحادثات والبث اللحظي.</p><button onClick={() => notify("تم تحديد الرسائل كأولوية للمرحلة التالية.")}>المرحلة التالية</button></div>}
+          {tab === "messages" && <section className="messenger">
+            <div className="conversation-panel">
+              <div className="messenger-head"><div><span className="eyebrow">PRIVATE SPACE</span><h2>رسائلك</h2></div><button className="primary-action" onClick={() => void startConversation()} disabled={messageBusy} aria-label="محادثة جديدة">＋ جديد</button></div>
+              <div className="conversation-list">{conversations.map((conv) => <button key={conv.id} className={`conversation-item ${selectedConversation === conv.id ? "active" : ""}`} onClick={() => setSelectedConversation(conv.id)}><Avatar profile={conv.other || { display_name: conv.title || "LUMA" }} /><span className="conversation-copy"><strong>{conv.is_group ? conv.title || "جروب" : conv.other?.display_name || conv.other?.username || "محادثة"}</strong><small>{conv.last_message || "ابدأ المحادثة"}</small></span><span className="conversation-time">{conv.last_at ? new Date(conv.last_at).toLocaleDateString() : ""}</span></button>)}
+              {!conversations.length && <div className="conversation-empty"><span>✦</span><strong>ابدأ أول محادثة</strong><p>اكتب اسم مستخدم صديقك واضغط «جديد».</p><button className="secondary-action" onClick={() => void startConversation()} disabled={messageBusy}>＋ محادثة جديدة</button></div>}</div>
+            </div>
+            <div className="message-panel">{selectedConversation ? <><div className="message-panel-head">{(() => { const conv = conversations.find((x) => x.id === selectedConversation); return <><Avatar profile={conv?.other || { display_name: conv?.title || "LUMA" }} /><div><strong>{conv?.is_group ? conv.title || "جروب" : conv?.other?.display_name || conv?.other?.username || "محادثة"}</strong><small>@{conv?.other?.username || "luma-chat"}</small></div></>; })()}</div><div className="message-thread">{messageRows.map((message) => <div key={message.id} className={`message-bubble-row ${message.sender_id === userId ? "mine" : ""}`}><div className="message-bubble">{message.body}<time>{new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></div></div>)}{!messageRows.length && <div className="thread-empty"><span>✦</span><strong>دي بداية حكاية جديدة</strong><p>ابعت أول رسالة.</p></div>}</div><form className="message-composer" onSubmit={sendMessage}><input value={messageDraft} onChange={(e) => setMessageDraft(e.target.value)} placeholder="اكتب رسالة..." maxLength={10000} aria-label="نص الرسالة" /><button className="primary-action" type="submit" disabled={messageBusy || !messageDraft.trim()} aria-label="إرسال الرسالة">إرسال ↗</button></form></> : <div className="thread-empty thread-welcome"><span>✦</span><h3>كل محادثة<br /><em>بداية جديدة.</em></h3><p>اختار محادثة من القائمة أو ابدأ واحدة جديدة باسم مستخدم.</p><button className="primary-action" onClick={() => void startConversation()} disabled={messageBusy}>＋ محادثة جديدة</button></div>}</div>
+          </section>}
           {tab === "groups" && <div className="welcome-card"><span className="eyebrow">COMMUNITIES</span><h3>جروبات<br /><em>وقنوات.</em></h3><p>سيتم توصيل إنشاء الجروبات والقنوات وإدارة الأعضاء بعد إنهاء أساس الحسابات والمنشورات.</p><button onClick={() => notify("تم تحديد المجتمعات كأولوية للمرحلة التالية.")}>المرحلة التالية</button></div>}
           {(tab === "discover" || tab === "search") && <><div className="trend-heading"><h2>{tab === "search" ? "الأشخاص" : "أحدث المنشورات"}</h2><span className="eyebrow">{posts.length} POSTS</span></div>{tab === "search" && peopleResults.length > 0 && <div className="people-results">{peopleResults.filter((p) => p.id !== userId).map((p) => <div className="suggestion-row" key={p.id}><Avatar profile={p} /><div className="suggestion-copy"><strong>{p.display_name}</strong><span>@{p.username}</span></div><button className={`mini-follow ${followingIds.includes(p.id) ? "on" : ""}`} onClick={() => void toggleFollow(p.id)}>{followingIds.includes(p.id) ? "✓" : "+"}</button></div>)}</div>}
           {filteredPosts.length === 0 ? <div className="empty-feed"><h3>{tab === "search" ? "مفيش نتائج مطابقة" : "لسه مفيش منشورات"}</h3><p>{tab === "search" ? "جرّب اسمًا أو كلمة مختلفة." : "ابدأ المجتمع بأول منشور حقيقي من حسابك."}</p><button className="primary-action" onClick={() => { setCreateKind("post"); setShowCreate(true); }}>انشر أول لحظة</button></div> : <div className="feed-list">{filteredPosts.map((post) => { const author = personOf(post.author); const liked = likedIds.includes(post.id); const following = followingIds.includes(post.author_id); const src = mediaUrl(post.media_path, supabase!); return <article className="post-card" key={post.id}>{src ? post.media_mime?.startsWith("video/") ? <video className="post-image" src={src} controls playsInline /> : <img className="post-image" src={src} alt={post.caption || "LUMA post"} /> : <div className="post-text-media">{post.caption.slice(0, 180)}</div>}<div className="post-shade" /><div className="post-badge">LUMA</div><button className={`post-more ${liked ? "is-liked" : ""}`} aria-label="إعجاب" onClick={() => void toggleLike(post.id)}><Icon name="heart" /></button><div className="post-actions-overlay"><button className={liked ? "is-liked" : ""} onClick={() => void toggleLike(post.id)} aria-label="إعجاب"><Icon name="heart" size={22} /><span>{compact(likeCounts[post.id] || 0)}</span></button><button onClick={() => void addComment(post.id)} aria-label="تعليق"><Icon name="comment" size={21} /><span>{compact(commentCounts[post.id] || 0)}</span></button><button onClick={() => { if (navigator.share) void navigator.share({ title: "LUMA", text: post.caption, url: window.location.href }).catch(() => {}); else notify("انسخ رابط LUMA لمشاركته."); }} aria-label="مشاركة"><Icon name="share" size={20} /><span>Share</span></button></div><div className="post-caption-area"><div className="post-author"><Avatar profile={author} /><div><strong>{author?.display_name || "عضو LUMA"}</strong><span>@{author?.username || "member"}</span></div>{author?.id !== userId && <button className={`follow-button ${following ? "following" : ""}`} onClick={() => void toggleFollow(post.author_id)}>{following ? "Following" : "Follow +"}</button>}</div><p>{post.caption}</p></div></article>; })}</div>}</>}

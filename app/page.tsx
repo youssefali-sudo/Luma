@@ -26,11 +26,12 @@ const COLORS: Record<HoloColor, string> = {
 
 function loadScript(src: string, marker: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const selector = `script[data-${marker}]`;
+    const selector = `script[data-luma-lib="${marker}"]`;
     const existing = document.querySelector<HTMLScriptElement>(selector);
     const ready = marker === "luma-peer" ? !!window.Peer : !!window.SelfieSegmentation;
     if (ready) return resolve();
     if (existing) {
+      if (existing.dataset.loaded === "true") return resolve();
       existing.addEventListener("load", () => resolve(), { once: true });
       existing.addEventListener("error", () => reject(new Error("تعذر تحميل مكتبة مطلوبة. تحقق من الإنترنت.")), { once: true });
       return;
@@ -38,8 +39,11 @@ function loadScript(src: string, marker: string): Promise<void> {
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
-    script.setAttribute(`data-${marker}`, "true");
-    script.onload = () => resolve();
+    script.setAttribute("data-luma-lib", marker);
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      resolve();
+    };
     script.onerror = () => reject(new Error("تعذر تحميل مكتبة مطلوبة. تحقق من الإنترنت."));
     document.head.appendChild(script);
   });

@@ -59,13 +59,7 @@ export default function Home() {
     ctx.drawImage(results.image, 0, 0, width, height);
     ctx.restore();
 
-    // A restrained cyan overlay gives the cut-out a holographic look without obscuring it.
-    ctx.save();
-    ctx.globalCompositeOperation = "screen";
-    ctx.globalAlpha = glow / 350;
-    ctx.fillStyle = "#22d3ee";
-    ctx.fillRect(0, 0, width, height);
-    ctx.restore();
+    // The CSS drop-shadow adds glow around the isolated silhouette without tinting the black background.
 
     if (scanlines) {
       ctx.save();

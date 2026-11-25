@@ -47,20 +47,17 @@ export default function Home() {
     }
     ctx.save();
     ctx.clearRect(0, 0, width, height);
+
+    // Isolate the subject on transparency, then place pure black behind it.
+    ctx.drawImage(results.image, 0, 0, width, height);
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.drawImage(results.segmentationMask, 0, 0, width, height);
+    ctx.globalCompositeOperation = "destination-over";
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, width, height);
-
-    // Draw the person through the segmentation mask; the surrounding pixels stay pure black.
-    ctx.save();
-    ctx.filter = `brightness(${brightness}%) saturate(1.25) contrast(1.08)`;
     ctx.globalCompositeOperation = "source-over";
-    ctx.drawImage(results.segmentationMask, 0, 0, width, height);
-    ctx.globalCompositeOperation = "source-in";
-    ctx.drawImage(results.image, 0, 0, width, height);
-    ctx.restore();
 
-    // The CSS drop-shadow adds glow around the isolated silhouette without tinting the black background.
-
+    // Keep black pixels black; add subtle scan lines only when enabled.
     if (scanlines) {
       ctx.save();
       ctx.globalAlpha = 0.1;

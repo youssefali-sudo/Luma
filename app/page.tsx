@@ -175,7 +175,7 @@ export default function Home() {
         segmenter.onResults(drawResults);
         segmenterRef.current = segmenter;
         const tick = async () => {
-          const source = callState === "CONNECTED" && remoteVideo.current?.readyState === 4 ? remoteVideo.current : localVideo.current;
+          const remoteReady = !!remoteVideo.current?.srcObject && remoteVideo.current.readyState >= 2;\n          const source = remoteReady ? remoteVideo.current : localVideo.current;
           if (source && source.readyState >= 2 && segmenterRef.current && !busyRef.current) {
             busyRef.current = true;
             try { await segmenterRef.current.send({ image: source }); } catch {}
@@ -194,7 +194,7 @@ export default function Home() {
       peerRef.current?.destroy();
       segmenterRef.current?.close();
     };
-  }, [drawResults, callState]);
+  }, [drawResults]);
 
   const copyRoom = async () => {
     try { await navigator.clipboard.writeText(roomId); setCallState((s) => s === "CONNECTED" ? s : "WAITING"); }

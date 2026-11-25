@@ -392,23 +392,23 @@ export default function Home() {
   };
 
   return (
-    <main className="relative h-[100dvh] w-full overflow-hidden bg-black text-white">
+    <main className="relative h-[100dvh] w-full overflow-hidden bg-[#0b0812] text-white">
       <video ref={localVideo} muted playsInline className="hidden" />
       <video ref={remoteVideo} playsInline autoPlay className="hidden" />
       <video ref={rearVideo} muted playsInline autoPlay className={mode === "ar" && rearCameraOn ? "absolute inset-0 z-0 h-full w-full object-cover" : "hidden"} />
-      {mode === "glass" && <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_50%_45%,rgba(0,102,255,.12),transparent_60%)]" />}
+      {mode === "glass" && <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_50%_45%,rgba(139,92,246,.16),transparent_62%)]" />}
       <div className="hud-corner left-4 top-4" /><div className="hud-corner right-4 top-4 rotate-90" />
       <div className="hud-corner bottom-4 left-4 -rotate-90" /><div className="hud-corner bottom-4 right-4 rotate-180" />
 
       <header className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-6 py-5">
         <button className="flex items-center gap-3" onClick={() => setDockVisible((v) => !v)}>
-          <span className="grid h-9 w-9 place-items-center rounded-xl border border-cyan-300/40 bg-cyan-300/10 font-black text-cyan-200 shadow-[0_0_22px_#0066ff33]">L</span>
-          <span className="text-left"><span className="block text-sm font-bold tracking-[.3em]">LUMA</span><span className="block text-[9px] tracking-[.25em] text-cyan-100/50">HOLO LINK</span></span>
+          <span className="grid h-9 w-9 place-items-center rounded-xl border border-violet-300/40 bg-violet-300/10 font-black text-violet-200 shadow-[0_0_22px_#8b5cf633]">L</span>
+          <span className="text-left"><span className="block text-sm font-bold tracking-[.3em]">LUMA</span><span className="block text-[9px] tracking-[.25em] text-violet-100/50">HOLO LINK</span></span>
         </button>
-        <span className="flex items-center gap-2 rounded-full border border-cyan-300/20 bg-black/50 px-3 py-2 text-[9px] tracking-[.16em] text-cyan-100/70"><i className={`h-1.5 w-1.5 rounded-full ${callState === "CONNECTED" ? "bg-emerald-400" : "bg-cyan-300"}`} />{callState}</span>
+        <span className="flex items-center gap-2 rounded-full border border-violet-300/20 bg-[#100b1b]/75 px-3 py-2 text-[9px] tracking-[.16em] text-violet-100/70"><i className={`h-1.5 w-1.5 rounded-full ${callState === "CONNECTED" ? "bg-emerald-400" : "bg-violet-300"}`} />{callState}</span>
       </header>
 
-      {mode === "ar" && !rearCameraOn && <div className="absolute inset-0 z-0 grid place-items-center bg-slate-950 px-8 text-center text-sm text-slate-300">جارٍ تشغيل الكاميرا الخلفية… اسمح للمتصفح باستخدام الكاميرا.</div>}
+      {mode === "ar" && !rearCameraOn && <div className="absolute inset-0 z-0 grid place-items-center bg-[#100b1b] px-8 text-center text-sm text-slate-300">جارٍ تشغيل الكاميرا الخلفية… اسمح للمتصفح باستخدام الكاميرا.</div>}
       <canvas
         ref={canvasRef}
         aria-label="Hologram video output"
@@ -422,25 +422,25 @@ export default function Home() {
 
       {mode === "ar" && rearCameraOn && <div className="holo-base-ring pointer-events-none absolute z-10" style={{ left: `${holoPosition.x}%`, top: `${Math.min(92, holoPosition.y + 17 * holoScale)}%`, transform: `translate(-50%,-50%) scale(${holoScale})`, borderColor: COLORS[holoColor], boxShadow: `0 0 18px ${COLORS[holoColor]}, inset 0 0 14px ${COLORS[holoColor]}` }} />}
       {mode === "glass" && !cameraOn && callState !== "CONNECTED" && <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-8 text-center">
-        <div className="holo-orb mb-7 grid h-24 w-24 place-items-center rounded-full border border-cyan-300/40 text-4xl text-cyan-200">◈</div>
+        <div className="holo-orb mb-7 grid h-24 w-24 place-items-center rounded-full border border-violet-300/40 text-4xl text-violet-200">◈</div>
         <h1 className="text-xl font-medium tracking-[.14em]">HOLOGRAM LINK</h1>
         <p className="mt-2 max-w-xs text-xs leading-6 text-slate-500">أنشئ غرفة وشارك الكود مع صديقك لبدء مكالمة مباشرة</p>
       </div>}
-      <div className="pointer-events-none absolute left-7 top-24 z-20 text-[9px] leading-5 tracking-[.2em] text-cyan-200/70">LUMA / {mode === "ar" ? "AR ROOM FEED" : "OPTICAL FEED"}<br />{mode === "ar" ? "CAMERA: REAR" : "BG: #000000"}<br />{callState === "CONNECTED" ? "REMOTE SUBJECT ACTIVE" : "AWAITING SIGNAL"}</div>
-      {mode === "ar" && <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/50 px-3 py-2 text-[10px] text-white/80">اسحب بإصبع واحد للتحريك • قرّب إصبعين للتكبير</div>}
+      <div className="pointer-events-none absolute left-7 top-24 z-20 text-[9px] leading-5 tracking-[.2em] text-violet-200/70">LUMA / {mode === "ar" ? "AR ROOM FEED" : "OPTICAL FEED"}<br />{mode === "ar" ? "CAMERA: REAR" : "BG: #000000"}<br />{callState === "CONNECTED" ? "REMOTE SUBJECT ACTIVE" : "AWAITING SIGNAL"}</div>
+      {mode === "ar" && <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[#100b1b]/75 px-3 py-2 text-[10px] text-white/80">اسحب بإصبع واحد للتحريك • قرّب إصبعين للتكبير</div>}
 
       {dockVisible && <section className="glass-dock absolute bottom-4 left-1/2 z-30 max-h-[62dvh] w-[min(94vw,540px)] -translate-x-1/2 overflow-y-auto rounded-2xl p-3" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center justify-between"><span className="text-[10px] font-semibold tracking-[.2em] text-cyan-100">CONTROL DOCK</span><button className="text-xs text-slate-400" onClick={() => setDockVisible(false)}>إخفاء ×</button></div>
-        <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-black/50 p-1">
-          <button onClick={() => void switchMode("glass")} className={`rounded-lg px-3 py-2 text-xs ${mode === "glass" ? "bg-cyan-300 text-slate-950 font-bold" : "text-slate-300"}`}>Glass Mode</button>
-          <button onClick={() => void switchMode("ar")} className={`rounded-lg px-3 py-2 text-xs ${mode === "ar" ? "bg-cyan-300 text-slate-950 font-bold" : "text-slate-300"}`}>AR Room Mode</button>
+        <div className="mb-3 flex items-center justify-between"><span className="text-[10px] font-semibold tracking-[.2em] text-violet-100">CONTROL DOCK</span><button className="text-xs text-slate-400" onClick={() => setDockVisible(false)}>إخفاء ×</button></div>
+        <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-[#100b1b]/75 p-1">
+          <button onClick={() => void switchMode("glass")} className={`rounded-lg px-3 py-2 text-xs ${mode === "glass" ? "bg-violet-300 text-slate-950 font-bold" : "text-slate-300"}`}>Glass Mode</button>
+          <button onClick={() => void switchMode("ar")} className={`rounded-lg px-3 py-2 text-xs ${mode === "ar" ? "bg-violet-300 text-slate-950 font-bold" : "text-slate-300"}`}>AR Room Mode</button>
         </div>
-        {!roomId ? <button onClick={createRoom} className="w-full rounded-xl bg-gradient-to-r from-cyan-300 to-blue-500 px-4 py-3 text-sm font-bold text-slate-950 shadow-[0_0_25px_#0066ff44]">Create Hologram Room</button> : <div className="mb-3 rounded-xl border border-cyan-300/20 bg-black/40 p-3"><div className="text-[9px] tracking-[.15em] text-slate-500">YOUR ROOM CODE</div><div className="mt-1 flex items-center justify-between gap-2"><code className="max-w-[70%] overflow-hidden text-ellipsis text-sm text-cyan-100">{roomId}</code><button onClick={copyRoom} className="rounded-lg border border-cyan-300/30 px-3 py-2 text-xs text-cyan-100">Copy code</button></div></div>}
-        <div className="mt-3 flex gap-2"><input value={joinCode} onChange={(e) => setJoinCode(e.target.value)} placeholder="Paste friend's room code" aria-label="Room code" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/60 px-3 py-3 text-xs outline-none placeholder:text-slate-600 focus:border-cyan-300/50" /><button onClick={joinRoom} className="rounded-xl border border-cyan-300/40 px-4 py-3 text-xs font-semibold text-cyan-100">Join Room</button></div>
+        {!roomId ? <button onClick={createRoom} className="w-full rounded-xl bg-gradient-to-r from-violet-400 to-fuchsia-500 px-4 py-3 text-sm font-bold text-slate-950 shadow-[0_0_25px_#8b5cf644]">Create Hologram Room</button> : <div className="mb-3 rounded-xl border border-violet-300/20 bg-[#100b1b]/65 p-3"><div className="text-[9px] tracking-[.15em] text-slate-500">YOUR ROOM CODE</div><div className="mt-1 flex items-center justify-between gap-2"><code className="max-w-[70%] overflow-hidden text-ellipsis text-sm text-violet-100">{roomId}</code><button onClick={copyRoom} className="rounded-lg border border-violet-300/30 px-3 py-2 text-xs text-violet-100">Copy code</button></div></div>}
+        <div className="mt-3 flex gap-2"><input value={joinCode} onChange={(e) => setJoinCode(e.target.value)} placeholder="Paste friend's room code" aria-label="Room code" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#100b1b]/80 px-3 py-3 text-xs outline-none placeholder:text-slate-600 focus:border-violet-300/50" /><button onClick={joinRoom} className="rounded-xl border border-violet-300/40 px-4 py-3 text-xs font-semibold text-violet-100">Join Room</button></div>
         <div className="mt-3 grid grid-cols-4 gap-2">
-          {(["cyan", "gold", "green", "red"] as HoloColor[]).map((color) => <button key={color} onClick={() => selectColor(color)} className={`rounded-xl border px-1 py-2 text-[10px] ${holoColor === color ? "border-white/70 bg-white/10" : "border-white/10 bg-black/40"}`} style={{ color: COLORS[color] }}>{({ cyan: "Cyan Blue", gold: "Iron Gold", green: "Matrix Green", red: "Crimson" })[color]}</button>)}
+          {(["cyan", "gold", "green", "red"] as HoloColor[]).map((color) => <button key={color} onClick={() => selectColor(color)} className={`rounded-xl border px-1 py-2 text-[10px] ${holoColor === color ? "border-white/70 bg-white/10" : "border-white/10 bg-[#100b1b]/65"}`} style={{ color: COLORS[color] }}>{({ cyan: "Cyan Blue", gold: "Iron Gold", green: "Matrix Green", red: "Crimson" })[color]}</button>)}
         </div>
-        {mode === "ar" && <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-3"><div className="mb-2 flex justify-between text-[10px] text-slate-300"><span>Hologram size</span><span>{Math.round(holoScale * 100)}%</span></div><input aria-label="Hologram size" type="range" min="35" max="220" value={Math.round(holoScale * 100)} onChange={(e) => { const v = Number(e.target.value) / 100; scaleRef.current = v; setHoloScale(v); }} className="w-full" /></div>}
+        {mode === "ar" && <div className="mt-3 rounded-xl border border-white/10 bg-[#100b1b]/55 p-3"><div className="mb-2 flex justify-between text-[10px] text-slate-300"><span>Hologram size</span><span>{Math.round(holoScale * 100)}%</span></div><input aria-label="Hologram size" type="range" min="35" max="220" value={Math.round(holoScale * 100)} onChange={(e) => { const v = Number(e.target.value) / 100; scaleRef.current = v; setHoloScale(v); }} className="w-full" /></div>}
         <div className="mt-3 grid grid-cols-4 gap-2">
           <button onClick={() => setMirror((v) => !v)} className="dock-button">{mirror ? "Mirror ON" : "Mirror OFF"}</button>
           <button onClick={() => setScanlines((v) => !v)} className="dock-button">{scanlines ? "Lines ON" : "Lines OFF"}</button>
@@ -452,7 +452,7 @@ export default function Home() {
         <p className="mt-3 text-center text-[9px] leading-4 text-slate-500">الصوت والصورة عبر WebRTC؛ يلزم إذن الكاميرا والميكروفون والإنترنت للطرفين. وضع AR يدمج الشخص داخل معاينة الكاميرا فقط، وليس مجسمًا ثلاثي الأبعاد حقيقيًا.</p>
         {callState === "CONNECTED" && <button onClick={hangUp} className="mt-3 w-full rounded-xl border border-rose-300/30 py-2 text-xs text-rose-200">End call</button>}
       </section>}
-      {!dockVisible && <button onClick={() => setDockVisible(true)} className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full border border-cyan-300/30 bg-slate-950/70 px-5 py-3 text-xs text-cyan-100 backdrop-blur-xl">Open controls</button>}
+      {!dockVisible && <button onClick={() => setDockVisible(true)} className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full border border-violet-300/30 bg-[#100b1b]/70 px-5 py-3 text-xs text-violet-100 backdrop-blur-xl">Open controls</button>}
     </main>
   );
 }

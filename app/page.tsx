@@ -81,8 +81,11 @@ export default function Home() {
   const [holoScale, setHoloScale] = useState(1);
   const [holoPosition, setHoloPosition] = useState({ x: 50, y: 57 });
   const [rearCameraOn, setRearCameraOn] = useState(false);
+  const visualSettingsRef = useRef({ brightness, glow, mirror, scanlines });
+  visualSettingsRef.current = { brightness, glow, mirror, scanlines };
 
   const drawResults = useCallback((results: SegmentationResults) => {
+    const visual = visualSettingsRef.current;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -113,7 +116,7 @@ export default function Home() {
     maskCtx.globalAlpha = Math.min(0.58, glow / 150);
     maskCtx.fillRect(0, 0, w, h);
     maskCtx.globalAlpha = 1;
-    if (scanlines) {
+    if (visual.scanlines) {
       maskCtx.fillStyle = COLORS[colorRef.current];
       maskCtx.globalAlpha = 0.13;
       for (let y = 0; y < h; y += 6) maskCtx.fillRect(0, y, w, 1);
@@ -131,7 +134,7 @@ export default function Home() {
       const dw = w * scale;
       const dh = h * scale;
       ctx.save();
-      if (mirror) {
+      if (visual.mirror) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
@@ -144,11 +147,11 @@ export default function Home() {
       const x = canvas.width * positionRef.current.x / 100 - dw / 2;
       const y = canvas.height * positionRef.current.y / 100 - dh / 2;
       ctx.save();
-      ctx.filter = `brightness(${brightness}%) drop-shadow(0 0 ${glow / 2}px ${COLORS[colorRef.current]})`;
+      ctx.filter = `brightness(${visual.brightness}%) drop-shadow(0 0 ${visual.glow / 2}px ${COLORS[colorRef.current]})`;
       ctx.drawImage(maskCanvas, x, y, dw, dh);
       ctx.restore();
     }
-  }, [brightness, glow, mirror, scanlines]);
+  }, []);
 
   const wireCall = (call: any) => {
     callRef.current = call;

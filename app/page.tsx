@@ -224,7 +224,7 @@ export default function Home() {
                 ref={canvasRef}
                 aria-label="Live isolated subject preview"
                 className={`relative z-[1] h-full w-full object-contain ${mirror ? "-scale-x-100" : ""} ${flipY ? "-scale-y-100" : ""} ${scanlines ? "scanlines" : ""}`}
-                style={{ filter: `brightness(${brightness}%) drop-shadow(0 0 18px rgba(34,211,238,${glow / 200}))` }}
+                style={{ filter: `brightness(${brightness}%)` }}
               />
               {!cameraOn && (
                 <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center bg-black/90 px-6 text-center">

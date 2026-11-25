@@ -74,7 +74,7 @@ export default function Home() {
   const [storyText, setStoryText] = useState("");
   const [notice, setNotice] = useState("");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const hydrated = useRef(false);\n  const fileInput = useRef<HTMLInputElement>(null);
   const storyInput = useRef<HTMLInputElement>(null);
   const active = chats.find((chat) => chat.id === activeChat) ?? chats[0];
 

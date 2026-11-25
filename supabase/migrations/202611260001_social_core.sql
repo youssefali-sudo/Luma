@@ -141,3 +141,19 @@ drop trigger if exists notify_comment_activity on public.post_comments;
 create trigger notify_comment_activity after insert on public.post_comments for each row execute function public.notify_social_activity();
 
 -- Keep public profile reads and existing message/group policies in the original schema.
+
+
+-- Add social tables to realtime only when they are not already published.
+do $$
+declare table_name text;
+begin
+  foreach table_name in array array['posts','follows','post_likes','post_comments','notifications'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = table_name
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', table_name);
+    end if;
+  end loop;
+end;
+$$;
